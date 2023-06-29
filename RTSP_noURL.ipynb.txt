@@ -1,0 +1,58 @@
+import cv2
+import os
+import numpy as np
+import six.moves.urllib as urllib
+import sys
+import tarfile
+import tensorflow as tf
+import zipfile
+
+from collections import defaultdict
+from io import StringIO
+import imutils
+from matplotlib import pyplot as plt
+from PIL import Image
+from IPython.display import display
+
+#RTSP_URL = '*******'
+
+os.environ['OPENCV_FFMPEG_CAPTURE_OPTIONS'] = 'rtsp_transport;udp'
+
+cap = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
+HOGCV = cv2.HOGDescriptor()
+HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+def detect(frame):
+    bounding_box_cordinates, weights =  HOGCV.detectMultiScale(frame, winStride = (4, 4), padding = (8, 8), scale = 1.03)
+    color = (255, 255, 255)
+    person = 1
+    for x,y,w,h in bounding_box_cordinates:
+        cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0), 2)
+        cv2.putText(frame, f'person {person}', (x,y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,255), 1)
+        person += 1
+    
+    cv2.putText(frame, 'Status : Detecting ', (30,30), cv2.FONT_HERSHEY_DUPLEX, 0.8,color, 2)
+    cv2.putText(frame, f'Total Persons : {person-1}', (30,70), cv2.FONT_HERSHEY_DUPLEX, 0.8, color, 2)
+
+    return frame
+
+if not cap.isOpened():
+    print('Cannot open RTSP stream')
+    exit(-1)
+
+while True:
+    rect, frame = cap.read()
+    frame = imutils.resize(frame , width=min(1280,frame.shape[1]))
+    if rect:
+        frame=detect(frame)
+        cv2.imshow('RTSP stream', frame)
+    #if writer is not None:
+    #    writer.write(framesize)
+
+    if cv2.waitKey(1) == 27:
+        cap.release()
+        cv2.destroyAllWindows()
+        break
+
+cap.release()
+cv2.destroyAllWindows()
